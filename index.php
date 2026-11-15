@@ -1,0 +1,40 @@
+
+<?php
+
+require_once __DIR__ . '/includes/session.php';
+
+// Make sure the customer is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: pages/login/login.php");
+    exit();
+}
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giftly - Customer Account</title>
+</head>
+
+<body>
+
+    <h1>Welcome to Giftly!</h1>
+
+    <p>
+        Hello,
+        <?php echo htmlspecialchars($_SESSION['first_name']); ?>!
+    </p>
+
+    <p>You have successfully logged in to your Giftly account.</p>
+
+    <p>
+        Email:
+        <?php echo htmlspecialchars($_SESSION['email']); ?>
+    </p>
+
+</body>
+</html>
