@@ -1,13 +1,7 @@
 
 <?php
 
-require_once __DIR__ . '/includes/session.php';
-
-// Make sure the customer is logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: pages/login/login.php");
-    exit();
-}
+require_once __DIR__ . '/includes/auth_check.php';
 
 ?>
 
