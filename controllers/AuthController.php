@@ -72,6 +72,57 @@ class AuthController
     }
 
 
+    // Handle customer profile updates
+    public function updateCustomerProfile($user_id, $data)
+    {
+        $first_name = trim($data['first_name'] ?? '');
+        $last_name = trim($data['last_name'] ?? '');
+        $email = trim($data['email'] ?? '');
+        $phone = trim($data['phone'] ?? '');
+
+        // Check that all fields are completed
+        if (
+            $first_name === '' ||
+            $last_name === '' ||
+            $email === '' ||
+            $phone === ''
+        ) {
+            return "Please complete all fields.";
+        }
+
+        // Validate email
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return "Please enter a valid email address.";
+        }
+
+        // Validate customer ID
+        if (!is_numeric($user_id) || (int)$user_id <= 0) {
+            return "Invalid customer ID.";
+        }
+
+        $user_id = (int)$user_id;
+
+        // Update the database
+        $result = $this->user->updateProfile(
+            $user_id,
+            $first_name,
+            $last_name,
+            $email,
+            $phone
+        );
+
+        // Update the session if the database update succeeds
+        if ($result === true) {
+            $_SESSION['first_name'] = $first_name;
+            $_SESSION['last_name'] = $last_name;
+            $_SESSION['email'] = $email;
+        }
+
+        return $result;
+    }
+
+
+
     // Handle customer login
     public function loginUser($email, $password)
     {

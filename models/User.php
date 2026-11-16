@@ -99,6 +99,56 @@ class User
         return $profile;
     }
 
+
+    // Update customer profile
+    public function updateProfile($user_id, $first_name, $last_name, $email, $phone)
+    {
+        // Check whether another customer already uses this email
+        $check = $this->conn->prepare(
+            "SELECT user_id FROM users
+             WHERE email = ? AND user_id != ?
+             LIMIT 1"
+        );
+
+        $check->bind_param("si", $email, $user_id);
+        $check->execute();
+
+        $result = $check->get_result();
+
+        if ($result->num_rows > 0) {
+            $check->close();
+            return "This email address is already in use.";
+        }
+
+        $check->close();
+
+        // Update the customer's information
+        $stmt = $this->conn->prepare(
+            "UPDATE users
+             SET first_name = ?, last_name = ?, email = ?, phone = ?
+             WHERE user_id = ?"
+        );
+
+        $stmt->bind_param(
+            "ssssi",
+            $first_name,
+            $last_name,
+            $email,
+            $phone,
+            $user_id
+        );
+
+        if ($stmt->execute()) {
+            $stmt->close();
+            return true;
+        }
+
+        $stmt->close();
+
+        return "Profile update failed. Please try again.";
+    }
+
+
     // Find a user by email
     public function findByEmail($email)
     {
