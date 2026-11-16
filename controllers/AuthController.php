@@ -54,6 +54,24 @@ class AuthController
         );
     }
 
+
+    // Get the logged-in customer's profile
+    public function getCustomerProfile($user_id)
+    {
+        if (!is_numeric($user_id) || (int)$user_id <= 0) {
+            return "Invalid customer ID.";
+        }
+
+        $profile = $this->user->getProfileById((int)$user_id);
+
+        if (!$profile) {
+            return "Customer profile not found.";
+        }
+
+        return $profile;
+    }
+
+
     // Handle customer login
     public function loginUser($email, $password)
     {

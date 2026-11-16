@@ -77,6 +77,28 @@ class User
         return "Registration failed. Please try again.";
     }
 
+
+    // Get customer profile using user ID
+    public function getProfileById($user_id)
+    {
+        $stmt = $this->conn->prepare(
+            "SELECT user_id, first_name, last_name, email, phone
+             FROM users
+             WHERE user_id = ?
+             LIMIT 1"
+        );
+
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+
+        $result = $stmt->get_result();
+        $profile = $result->fetch_assoc();
+
+        $stmt->close();
+
+        return $profile;
+    }
+
     // Find a user by email
     public function findByEmail($email)
     {
