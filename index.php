@@ -26,6 +26,10 @@ require_once __DIR__ . '/includes/auth_check.php';
     <p>You have successfully logged in to your Giftly account.</p>
 
     <p>
+        <a href="pages/home/home.php">Browse the Giftly storefront</a>
+    </p>
+
+    <p>
         Email:
         <?php echo htmlspecialchars($_SESSION['email']); ?>
     </p>

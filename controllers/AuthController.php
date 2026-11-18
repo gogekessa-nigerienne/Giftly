@@ -2,6 +2,7 @@
 <?php
 
 require_once __DIR__ . '/../models/User.php';
+require_once __DIR__ . '/../models/Cart.php';
 
 class AuthController
 {
@@ -136,6 +137,16 @@ class AuthController
 
         if (!$user || !password_verify($password, $user['password_hash'])) {
             return "Incorrect email or password.";
+        }
+
+        $cart = new Cart();
+        $cartResult = $cart->claimGuestCart(
+            session_id(),
+            (int) $user['user_id']
+        );
+
+        if ($cartResult !== true) {
+            return $cartResult;
         }
 
         session_regenerate_id(true);
