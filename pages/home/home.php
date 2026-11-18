@@ -106,7 +106,7 @@ function escape($value)
     <meta name="description"
           content="Discover thoughtful gifts for every person and every special occasion with Giftly.">
 
-    <link rel="stylesheet" href="home.css">
+    <link rel="stylesheet" href="../../assets/css/style.css">
 </head>
 
 <body>
@@ -122,9 +122,7 @@ function escape($value)
 
             <a href="home.php">Home</a>
             <a href="../shop/shop.php">Shop</a>
-            <a href="../categories/categories.php">Categories</a>
-            <a href="../about/about.php">About</a>
-            <a href="../contact/contact.php">Contact</a>
+            <a href="#categories">Categories</a>
 
         </nav>
 
@@ -139,7 +137,7 @@ function escape($value)
 
             <?php if (isset($_SESSION['user_id'])): ?>
 
-                <a href="../profile/profile.php">
+                <a href="../dashboard/CustomerDashboard.php">
                     My Account
                 </a>
 
@@ -190,9 +188,9 @@ function escape($value)
                     Explore Gifts
                 </a>
 
-                <a href="../recommendation/recommendation.php"
+                <a href="../shop/shop.php"
                    class="secondary-button">
-                    Find the Perfect Gift
+                    Browse All Gifts
                 </a>
 
             </div>
@@ -252,7 +250,7 @@ function escape($value)
 
 
         <!-- CATEGORIES SECTION -->
-        <section class="categories-section">
+        <section class="categories-section" id="categories">
 
             <h2>Explore Our Categories</h2>
 
@@ -307,8 +305,8 @@ function escape($value)
                 suitable gifts.
             </p>
 
-            <a href="../recommendation/recommendation.php">
-                Find My Perfect Gift
+            <a href="../shop/shop.php">
+                Explore Gifts
             </a>
 
         </section>

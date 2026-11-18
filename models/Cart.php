@@ -79,6 +79,98 @@ class Cart
         return (int) $cart_id;
     }
 
+    // Preserve a guest cart when its owner signs in
+    public function claimGuestCart($session_id, $user_id)
+    {
+        if (
+            !is_string($session_id) ||
+            $session_id === '' ||
+            !is_numeric($user_id) ||
+            (int) $user_id <= 0
+        ) {
+            return "Unable to restore your cart. Please try again.";
+        }
+
+        $user_id = (int) $user_id;
+        $this->conn->begin_transaction();
+
+        try {
+            $stmt = $this->conn->prepare(
+                "SELECT cart_id
+                 FROM carts
+                 WHERE session_id = ?
+                   AND user_id IS NULL
+                   AND status = 'active'
+                 ORDER BY cart_id DESC
+                 LIMIT 1
+                 FOR UPDATE"
+            );
+            $stmt->bind_param("s", $session_id);
+            $stmt->execute();
+            $guest_cart = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$guest_cart) {
+                $this->conn->commit();
+                return true;
+            }
+
+            $guest_cart_id = (int) $guest_cart['cart_id'];
+            $stmt = $this->conn->prepare(
+                "SELECT cart_id
+                 FROM carts
+                 WHERE user_id = ?
+                   AND status = 'active'
+                 ORDER BY cart_id DESC
+                 LIMIT 1
+                 FOR UPDATE"
+            );
+            $stmt->bind_param("i", $user_id);
+            $stmt->execute();
+            $user_cart = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$user_cart) {
+                $stmt = $this->conn->prepare(
+                    "UPDATE carts
+                     SET user_id = ?, session_id = NULL
+                     WHERE cart_id = ?"
+                );
+                $stmt->bind_param("ii", $user_id, $guest_cart_id);
+                $stmt->execute();
+                $stmt->close();
+            } else {
+                $user_cart_id = (int) $user_cart['cart_id'];
+                $stmt = $this->conn->prepare(
+                    "INSERT INTO cart_items (cart_id, product_id, quantity)
+                     SELECT ?, product_id, quantity
+                     FROM cart_items
+                     WHERE cart_id = ?
+                     ON DUPLICATE KEY UPDATE
+                        quantity = quantity + VALUES(quantity)"
+                );
+                $stmt->bind_param("ii", $user_cart_id, $guest_cart_id);
+                $stmt->execute();
+                $stmt->close();
+
+                $stmt = $this->conn->prepare(
+                    "DELETE FROM carts WHERE cart_id = ?"
+                );
+                $stmt->bind_param("i", $guest_cart_id);
+                $stmt->execute();
+                $stmt->close();
+            }
+
+            $this->conn->commit();
+            return true;
+        } catch (Throwable $e) {
+            $this->conn->rollback();
+            error_log("Unable to restore guest cart: " . $e->getMessage());
+
+            return "Unable to restore your cart. Please try again.";
+        }
+    }
+
     // Add a product to the cart
     public function addItem($product_id, $quantity, $user_id, $session_id)
     {

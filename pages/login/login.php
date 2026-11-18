@@ -8,7 +8,8 @@ $auth = new AuthController();
 $error = '';
 
 $success = $_SESSION['success_message'] ?? '';
-unset($_SESSION['success_message']);
+$accessError = $_SESSION['error_message'] ?? '';
+unset($_SESSION['success_message'], $_SESSION['error_message']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
@@ -44,6 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <?php if ($success !== ''): ?>
         <p><?php echo htmlspecialchars($success); ?></p>
+    <?php endif; ?>
+
+    <?php if ($accessError !== ''): ?>
+        <p><?php echo htmlspecialchars($accessError); ?></p>
     <?php endif; ?>
 
     <?php if ($error !== ''): ?>
