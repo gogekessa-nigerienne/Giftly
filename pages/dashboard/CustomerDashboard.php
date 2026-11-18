@@ -3,7 +3,6 @@
 
 // GIFTLY - CUSTOMER DASHBOARD PAGE
 
-
 require_once __DIR__ . '/../../controllers/CustomerDashboardController.php';
 
 // Safe output helper
@@ -27,9 +26,7 @@ function formatStatus($status) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>My Dashboard | Giftly</title>
-
     <link rel="stylesheet" href="../../assets/css/style.css">
 </head>
 
@@ -57,7 +54,7 @@ function formatStatus($status) {
                 <span>Shop Gifts</span>
             </a>
 
-            <a href="#recent-orders" class="nav-link">
+            <a href="../orders/orders.php" class="nav-link">
                 <span class="nav-icon">▤</span>
                 <span>My Orders</span>
             </a>
@@ -79,6 +76,7 @@ function formatStatus($status) {
                     name="csrf_token"
                     value="<?php echo e($_SESSION['csrf_token']); ?>"
                 >
+
                 <button type="submit" class="nav-link logout-link">
                     <span class="nav-icon">↪</span>
                     <span>Logout</span>
@@ -92,7 +90,7 @@ function formatStatus($status) {
     <!-- MAIN CONTENT -->
     <main class="dashboard-main">
 
-        <!-- Top bar -->
+        <!-- TOP BAR -->
         <header class="dashboard-topbar">
 
             <button
@@ -117,14 +115,10 @@ function formatStatus($status) {
 
                 <div class="customer-mini-profile">
                     <div class="profile-avatar">
-                        <?php
-                        echo strtoupper(substr($customer_name, 0, 1));
-                        ?>
+                        <?php echo strtoupper(substr($customer_name, 0, 1)); ?>
                     </div>
 
-                    <span>
-                        <?php echo e($customer_name); ?>
-                    </span>
+                    <span><?php echo e($customer_name); ?></span>
                 </div>
 
             </div>
@@ -132,7 +126,7 @@ function formatStatus($status) {
         </header>
 
 
-        <!--WELCOME SECTION -->
+        <!-- WELCOME SECTION -->
         <section class="dashboard-welcome">
 
             <div class="welcome-text">
@@ -156,7 +150,7 @@ function formatStatus($status) {
         </section>
 
 
-        <!--  ORDER STATISTICS-->
+        <!-- ORDER STATISTICS -->
         <section class="dashboard-statistics">
 
             <div class="stat-card">
@@ -189,18 +183,20 @@ function formatStatus($status) {
         </section>
 
 
-        <!--  RECENT ORDERS-->
+        <!-- RECENT ORDERS -->
         <section class="dashboard-section recent-orders-section" id="recent-orders">
 
             <div class="section-heading">
+
                 <div>
                     <p class="section-label">YOUR PURCHASES</p>
                     <h2>Recent Orders</h2>
                 </div>
 
-                <a href="#recent-orders" class="view-all-link">
+                <a href="../orders/orders.php" class="view-all-link">
                     View All →
                 </a>
+
             </div>
 
 
@@ -216,6 +212,7 @@ function formatStatus($status) {
                                 <th>Date</th>
                                 <th>Total</th>
                                 <th>Status</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
 
@@ -224,6 +221,7 @@ function formatStatus($status) {
                         <?php foreach ($recent_orders as $order): ?>
 
                             <tr>
+
                                 <td>
                                     #<?php echo e($order['order_number']); ?>
                                 </td>
@@ -238,9 +236,7 @@ function formatStatus($status) {
                                 </td>
 
                                 <td>
-                                    <?php
-                                    echo formatMoney($order['total_amount']);
-                                    ?>
+                                    <?php echo formatMoney($order['total_amount']); ?>
                                 </td>
 
                                 <td>
@@ -253,11 +249,19 @@ function formatStatus($status) {
                                             )
                                         );
                                     ?>">
-                                        <?php
-                                        echo e(formatStatus($order['order_status']));
-                                        ?>
+                                        <?php echo e(formatStatus($order['order_status'])); ?>
                                     </span>
                                 </td>
+
+                                <td>
+                                    <a
+                                        href="../orders/order_details.php?order_id=<?php echo (int) $order['order_id']; ?>"
+                                        class="view-all-link"
+                                    >
+                                        View Details
+                                    </a>
+                                </td>
+
                             </tr>
 
                         <?php endforeach; ?>
@@ -292,12 +296,11 @@ function formatStatus($status) {
         </section>
 
 
-        <!-- ========================================
-             FEATURED GIFTS
-        ========================================= -->
+        <!-- FEATURED GIFTS -->
         <section class="dashboard-section featured-gifts-section">
 
             <div class="section-heading">
+
                 <div>
                     <p class="section-label">HANDPICKED FOR YOU</p>
                     <h2>Explore Special Gifts</h2>
@@ -306,6 +309,7 @@ function formatStatus($status) {
                 <a href="../shop/shop.php" class="view-all-link">
                     Shop All →
                 </a>
+
             </div>
 
 
@@ -373,7 +377,7 @@ function formatStatus($status) {
         </section>
 
 
-
+        <!-- GIFT FINDER -->
         <section class="gift-finder-banner">
 
             <div class="gift-finder-content">
@@ -388,8 +392,7 @@ function formatStatus($status) {
                     they'll love.
                 </p>
 
-                <a href="../shop/shop.php"
-                   class="gift-finder-button">
+                <a href="../shop/shop.php" class="gift-finder-button">
                     Explore Gifts →
                 </a>
 
@@ -398,6 +401,7 @@ function formatStatus($status) {
         </section>
 
 
+        <!-- FOOTER -->
         <footer class="dashboard-footer">
             <p>
                 © <?php echo date('Y'); ?> Giftly.
