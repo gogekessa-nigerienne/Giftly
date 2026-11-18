@@ -62,6 +62,26 @@ class CheckoutController
         );
     }
 
+
+    // Confirm an order and reduce its product stock
+    public function confirmOrder($order_id)
+    {
+        // Only an administrator should confirm orders
+        if (
+            !isset($_SESSION['role_id']) ||
+            (int) $_SESSION['role_id'] !== 2
+        ) {
+            return "You are not authorized to confirm orders.";
+        }
+
+        if (!is_numeric($order_id) || (int) $order_id <= 0) {
+            return "Invalid order.";
+        }
+
+        return $this->order->confirmOrder((int) $order_id);
+    }
+
+
     // Retrieve the logged-in customer's order history
     public function getOrderHistory()
     {

@@ -289,6 +289,147 @@ class Order
         }
     }
 
+
+    // Confirm an order and reduce product stock
+    public function confirmOrder($order_id)
+    {
+        if (!is_numeric($order_id) || (int) $order_id <= 0) {
+            return "Invalid order.";
+        }
+
+        $order_id = (int) $order_id;
+
+        $this->conn->begin_transaction();
+
+        try {
+
+            // Check and lock the order
+            $stmt = $this->conn->prepare(
+                "SELECT order_status
+                 FROM orders
+                 WHERE order_id = ?
+                 FOR UPDATE"
+            );
+
+            $stmt->bind_param("i", $order_id);
+            $stmt->execute();
+
+            $order = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$order) {
+                throw new Exception("Order not found.");
+            }
+
+            if ($order['order_status'] !== 'pending') {
+                throw new Exception("This order has already been processed.");
+            }
+
+            // Retrieve the products in the order
+            $stmt = $this->conn->prepare(
+                "SELECT product_id, quantity
+                 FROM order_items
+                 WHERE order_id = ?"
+            );
+
+            $stmt->bind_param("i", $order_id);
+            $stmt->execute();
+
+            $result = $stmt->get_result();
+            $items = [];
+
+            while ($row = $result->fetch_assoc()) {
+                $items[] = $row;
+            }
+
+            $stmt->close();
+
+            if (empty($items)) {
+                throw new Exception("No products found in this order.");
+            }
+
+            // Check and reduce stock for each product
+            foreach ($items as $item) {
+
+                $product_id = (int) $item['product_id'];
+                $quantity = (int) $item['quantity'];
+
+                // Lock the product stock record
+                $stmt = $this->conn->prepare(
+                    "SELECT stock_quantity
+                     FROM products
+                     WHERE product_id = ?
+                     FOR UPDATE"
+                );
+
+                $stmt->bind_param("i", $product_id);
+                $stmt->execute();
+
+                $product = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$product) {
+                    throw new Exception("A product in this order was not found.");
+                }
+
+                if ((int) $product['stock_quantity'] < $quantity) {
+                    throw new Exception("Insufficient stock for a product in this order.");
+                }
+
+                // Deduct the purchased quantity
+                $stmt = $this->conn->prepare(
+                    "UPDATE products
+                     SET stock_quantity = stock_quantity - ?
+                     WHERE product_id = ?
+                     AND stock_quantity >= ?"
+                );
+
+                $stmt->bind_param(
+                    "iii",
+                    $quantity,
+                    $product_id,
+                    $quantity
+                );
+
+                if (!$stmt->execute() || $stmt->affected_rows !== 1) {
+                    $stmt->close();
+                    throw new Exception("Unable to update product stock.");
+                }
+
+                $stmt->close();
+            }
+
+            // Mark the order as confirmed
+            $stmt = $this->conn->prepare(
+                "UPDATE orders
+                 SET order_status = 'confirmed'
+                 WHERE order_id = ?
+                 AND order_status = 'pending'"
+            );
+
+            $stmt->bind_param("i", $order_id);
+
+            if (!$stmt->execute() || $stmt->affected_rows !== 1) {
+                $stmt->close();
+                throw new Exception("Unable to confirm the order.");
+            }
+
+            $stmt->close();
+
+            $this->conn->commit();
+
+            return true;
+
+        } catch (Throwable $e) {
+
+            $this->conn->rollback();
+            error_log($e->getMessage());
+
+            return $e->getMessage();
+        }
+    }
+
+
     // Retrieve a customer's previous orders
     public function getOrderHistory($user_id)
     {
