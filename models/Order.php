@@ -464,6 +464,44 @@ class Order
         return $orders;
     }
 
+
+    // Retrieve one order belonging to a specific customer
+    public function getOrderById($order_id, $user_id)
+    {
+        $stmt = $this->conn->prepare(
+            "SELECT
+                order_id,
+                order_number,
+                recipient_name,
+                contact_phone,
+                delivery_method,
+                delivery_address,
+                city,
+                delivery_notes,
+                gift_message,
+                subtotal,
+                delivery_fee,
+                total_amount,
+                order_status,
+                placed_at
+             FROM orders
+             WHERE order_id = ?
+             AND user_id = ?
+             LIMIT 1"
+        );
+
+        $stmt->bind_param("ii", $order_id, $user_id);
+        $stmt->execute();
+
+        $result = $stmt->get_result();
+        $order = $result->fetch_assoc();
+
+        $stmt->close();
+
+        return $order ?: null;
+    }
+
+
     // Retrieve the products belonging to one customer's order
     public function getOrderDetails($order_id, $user_id)
     {

@@ -94,6 +94,27 @@ class CheckoutController
         return $this->order->getOrderHistory($user_id);
     }
 
+
+    // Retrieve one order's main information
+    public function getOrderById($order_id)
+    {
+        $user_id = $this->getUserId();
+
+        if (!$user_id) {
+            return null;
+        }
+
+        if (!is_numeric($order_id) || (int) $order_id <= 0) {
+            return null;
+        }
+
+        return $this->order->getOrderById(
+            (int) $order_id,
+            $user_id
+        );
+    }
+
+
     // Retrieve the details of one order
     public function getOrderDetails($order_id)
     {
