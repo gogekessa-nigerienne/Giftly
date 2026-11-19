@@ -1,0 +1,21 @@
+﻿
+# Database credentials
+config/db.php
+.env
+.env.*
+
+# Python temporary files
+__pycache__/
+*.pyc
+
+# Local server and debug files
+*.log
+check_curl.php
+test_admin_password.php
+
+# Large archive
+assets.zip
+
+# Operating system files
+.DS_Store
+Thumbs.db

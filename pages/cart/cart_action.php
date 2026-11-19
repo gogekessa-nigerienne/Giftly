@@ -1,5 +1,5 @@
-
 <?php
+
 require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../controllers/CartController.php';
 
@@ -14,6 +14,7 @@ $action = $_POST['action'] ?? '';
 $csrf_token = $_POST['csrf_token'] ?? '';
 
 switch ($action) {
+
     case 'add':
         $result = $cartController->addToCart(
             $_POST['product_id'] ?? 0,
@@ -37,13 +38,28 @@ switch ($action) {
         );
         break;
 
+    case 'set_packaging':
+        $result = $cartController->setPackaging(
+            $_POST['cart_item_id'] ?? 0,
+            $_POST['packaging_id'] ?? null,
+            $csrf_token
+        );
+        break;
+
     default:
         $result = 'Invalid cart action.';
 }
 
 if ($result === true) {
-    $_SESSION['cart_success'] = 'Your cart has been updated successfully.';
+
+    if ($action === 'set_packaging') {
+        $_SESSION['cart_success'] = 'Gift packaging updated successfully.';
+    } else {
+        $_SESSION['cart_success'] = 'Your cart has been updated successfully.';
+    }
+
 } else {
+
     $_SESSION['cart_error'] = is_string($result)
         ? $result
         : 'Something went wrong. Please try again.';
@@ -51,4 +67,3 @@ if ($result === true) {
 
 header('Location: cart.php');
 exit;
-?>

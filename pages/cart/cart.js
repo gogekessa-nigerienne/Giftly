@@ -1,7 +1,6 @@
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    // Quantity controls
     document.querySelectorAll(".cart-quantity-form").forEach(form => {
 
         const input = form.querySelector('input[name="quantity"]');

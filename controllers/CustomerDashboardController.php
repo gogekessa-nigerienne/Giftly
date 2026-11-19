@@ -1,167 +1,167 @@
-
 <?php
-// CUSTOMER DASHBOARD CONTROLLER
 
-// Start session and check customer login
+// GIFTLY - CUSTOMER DASHBOARD CONTROLLER
+
 require_once __DIR__ . '/../includes/session.php';
-require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/../config/db.php';
 
-// Database connection
-require_once __DIR__ . '/../config/database.php';
+// --------------------------------------------------
+// 1. CHECK CUSTOMER LOGIN
+// --------------------------------------------------
 
-// Get logged-in customer ID
-$user_id = (int) $_SESSION['user_id'];
-
-// CUSTOMER INFORMATION
-
-$customer = [];
-
-$stmt = $conn->prepare(
-    "SELECT user_id, first_name, last_name, email, phone
-     FROM users
-     WHERE user_id = ?
-     LIMIT 1"
-);
-
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-
-$result = $stmt->get_result();
-$customer = $result->fetch_assoc() ?? [];
-
-$stmt->close();
-
-// ORDER STATISTICS
-
-
-$total_orders = 0;
-$pending_orders = 0;
-$delivered_orders = 0;
-
-$stmt = $conn->prepare(
-    "SELECT
-        COUNT(*) AS total_orders,
-        SUM(CASE
-            WHEN order_status IN (
-                'pending',
-                'confirmed',
-                'processing',
-                'out_for_delivery'
-            )
-            THEN 1 ELSE 0
-        END) AS pending_orders,
-        SUM(CASE
-            WHEN order_status = 'delivered'
-            THEN 1 ELSE 0
-        END) AS delivered_orders
-     FROM orders
-     WHERE user_id = ?"
-);
-
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-
-$result = $stmt->get_result();
-$order_stats = $result->fetch_assoc();
-
-if ($order_stats) {
-    $total_orders = (int) $order_stats['total_orders'];
-    $pending_orders = (int) $order_stats['pending_orders'];
-    $delivered_orders = (int) $order_stats['delivered_orders'];
+if (!isset($_SESSION['customer_id'])) {
+    header('Location: ../login/Login.php');
+    exit();
 }
 
-$stmt->close();
+$customer_id = (int) $_SESSION['customer_id'];
 
+// --------------------------------------------------
+// 2. VERIFY CUSTOMER ACCOUNT
+// --------------------------------------------------
 
-//  RECENT ORDERS
+$customerQuery = $pdo->prepare("
+    SELECT user_id, first_name, last_name, email
+    FROM users
+    WHERE user_id = ?
+      AND role_id = 1
+      AND is_active = 1
+    LIMIT 1
+");
 
+$customerQuery->execute([$customer_id]);
 
-$recent_orders = [];
+$customer = $customerQuery->fetch(PDO::FETCH_ASSOC);
 
-$stmt = $conn->prepare(
-    "SELECT
+if (!$customer) {
+    $_SESSION = [];
+    session_destroy();
+
+    header('Location: ../login/Login.php');
+    exit();
+}
+
+$customer_name = trim(
+    $customer['first_name'] . ' ' . $customer['last_name']
+);
+
+$_SESSION['customer_name'] = $customer_name;
+
+// --------------------------------------------------
+// 3. CREATE CSRF TOKEN FOR LOGOUT FORM
+// --------------------------------------------------
+
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// --------------------------------------------------
+// 4. GET CUSTOMER CART COUNT
+// --------------------------------------------------
+
+$cartQuery = $pdo->prepare("
+    SELECT COALESCE(SUM(ci.quantity), 0)
+    FROM carts c
+    LEFT JOIN cart_items ci
+        ON ci.cart_id = c.cart_id
+    WHERE c.user_id = ?
+      AND c.status = 'active'
+");
+
+$cartQuery->execute([$customer_id]);
+
+$cart_count = (int) $cartQuery->fetchColumn();
+
+// --------------------------------------------------
+// 5. GET TOTAL ORDERS
+// --------------------------------------------------
+
+$totalOrdersQuery = $pdo->prepare("
+    SELECT COUNT(*)
+    FROM orders
+    WHERE user_id = ?
+");
+
+$totalOrdersQuery->execute([$customer_id]);
+
+$total_orders = (int) $totalOrdersQuery->fetchColumn();
+
+// --------------------------------------------------
+// 6. GET ORDERS IN PROGRESS
+// --------------------------------------------------
+
+$pendingOrdersQuery = $pdo->prepare("
+    SELECT COUNT(*)
+    FROM orders
+    WHERE user_id = ?
+      AND order_status IN (
+          'pending',
+          'confirmed',
+          'processing',
+          'out_for_delivery'
+      )
+");
+
+$pendingOrdersQuery->execute([$customer_id]);
+
+$pending_orders = (int) $pendingOrdersQuery->fetchColumn();
+
+// --------------------------------------------------
+// 7. GET DELIVERED ORDERS
+// --------------------------------------------------
+
+$deliveredOrdersQuery = $pdo->prepare("
+    SELECT COUNT(*)
+    FROM orders
+    WHERE user_id = ?
+      AND order_status = 'delivered'
+");
+
+$deliveredOrdersQuery->execute([$customer_id]);
+
+$delivered_orders = (int) $deliveredOrdersQuery->fetchColumn();
+
+// --------------------------------------------------
+// 8. GET RECENT ORDERS
+// --------------------------------------------------
+
+$recentOrdersQuery = $pdo->prepare("
+    SELECT
         order_id,
         order_number,
         total_amount,
         order_status,
         placed_at
-     FROM orders
-     WHERE user_id = ?
-     ORDER BY placed_at DESC
-     LIMIT 5"
-);
+    FROM orders
+    WHERE user_id = ?
+    ORDER BY placed_at DESC
+    LIMIT 5
+");
 
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
+$recentOrdersQuery->execute([$customer_id]);
 
-$result = $stmt->get_result();
+$recent_orders = $recentOrdersQuery->fetchAll(PDO::FETCH_ASSOC);
 
-while ($row = $result->fetch_assoc()) {
-    $recent_orders[] = $row;
-}
+// --------------------------------------------------
+// 9. GET FEATURED PRODUCTS
+// --------------------------------------------------
 
-$stmt->close();
-
-//  CUSTOMER CART COUNT
-
-
-$cart_count = 0;
-
-$stmt = $conn->prepare(
-    "SELECT COALESCE(SUM(ci.quantity), 0) AS cart_count
-     FROM carts c
-     INNER JOIN cart_items ci ON c.cart_id = ci.cart_id
-     WHERE c.user_id = ?
-       AND c.status = 'active'"
-);
-
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-
-$result = $stmt->get_result();
-$cart_data = $result->fetch_assoc();
-
-if ($cart_data) {
-    $cart_count = (int) $cart_data['cart_count'];
-}
-
-$stmt->close();
-
-
-// FEATURED GIFT PRODUCCTS
-
-
-$featured_products = [];
-
-$stmt = $conn->prepare(
-    "SELECT
+$featuredProductsQuery = $pdo->prepare("
+    SELECT
         product_id,
         product_name,
         price,
-        image_path,
-        stock_quantity
-     FROM products
-     WHERE is_active = 1
-       AND is_featured = 1
-       AND stock_quantity > 0
-     ORDER BY created_at DESC
-     LIMIT 4"
-);
+        image_path
+    FROM products
+    WHERE is_active = 1
+      AND is_featured = 1
+      AND stock_quantity > 0
+    ORDER BY created_at DESC
+    LIMIT 4
+");
 
-$stmt->execute();
+$featuredProductsQuery->execute();
 
-$result = $stmt->get_result();
-
-while ($row = $result->fetch_assoc()) {
-    $featured_products[] = $row;
-}
-
-$stmt->close();
-
-
-//  CUSTOMER FIRST NAME
-
-
-$customer_name = $customer['first_name'] ?? 'Customer';
+$featured_products = $featuredProductsQuery->fetchAll(PDO::FETCH_ASSOC);
 
 ?>

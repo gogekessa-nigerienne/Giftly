@@ -1,0 +1,17 @@
+
+relationship,occasion,interest,budget,category
+Friend,Birthday,Fashion,100-250,Fashion
+Friend,Birthday,Fashion,100-250,Jewelry
+Friend,Birthday,Beauty,100-250,Beauty
+Mother,Birthday,Beauty,100-250,Beauty
+Mother,Anniversary,Fashion,100-250,Jewelry
+Partner,Anniversary,Fashion,100-250,Jewelry
+Partner,Anniversary,Technology,250-500,Technology
+Father,Birthday,Technology,100-250,Technology
+Father,Graduation,Technology,250-500,Technology
+Sibling,Birthday,Sports,50-100,Sports
+Friend,Graduation,Books,50-100,Books
+Colleague,Thank You,Food,50-100,Food
+Friend,Just Because,Fashion,100-250,Fashion
+Mother,Just Because,Beauty,250-500,Beauty
+Partner,Birthday,Beauty,100-250,Beauty
