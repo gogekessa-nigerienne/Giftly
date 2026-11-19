@@ -7,7 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/db.php';
 
 $featuredProducts = [];
 $categories = [];
@@ -106,8 +106,10 @@ function escape($value)
     <meta name="description"
           content="Discover thoughtful gifts for every person and every special occasion with Giftly.">
 
-    <link rel="stylesheet" href="../../assets/css/style.css">
+    <link rel="stylesheet" href="/Giftly/assets/css/style.css">
+    
 </head>
+
 
 <body>
 

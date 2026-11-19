@@ -514,5 +514,69 @@ class CheckoutController
                 'message' => 'Something went wrong while placing your order.'
             ];
         }
+        
+
     }
+        // Add this method INSIDE your CheckoutController class
+       public function verifyPayment($reference)
+    {
+        // FIX 1: Use the session variable instead of getUserId()
+        if (empty($_SESSION['customer_id'])) {
+            return "Please log in to complete payment.";
+        }
+
+        // 1. Verify with Paystack
+        $url = 'https://api.paystack.co/transaction/verify/' . $reference;
+        $options = [
+            'http' => [
+                'header' => "Authorization: Bearer " . PAYSTACK_SECRET_KEY . "\r\n"
+            ],
+            // Uncomment the two lines below if testing locally on XAMPP and getting SSL errors:
+            // 'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
+        ];
+        $context = stream_context_create($options);
+        $response = @file_get_contents($url, false, $context);
+        $result = json_decode($response, true);
+
+        // 2. If Paystack says it's successful
+        if ($result && $result['status'] === true && $result['data']['status'] === 'success') {
+            
+            $checkout_data = $_SESSION['checkout_data'] ?? [];
+            
+            // FIX 2: Call your existing placeOrder() method!
+            // We pass the session data and a valid CSRF token to bypass its internal check
+            $csrfToken = $_SESSION['csrf_token'] ?? '';
+            $placeOrderResult = $this->placeOrder($checkout_data, $csrfToken);
+
+            if ($placeOrderResult['success']) {
+                $orderId = $placeOrderResult['order_id'];
+
+                // 3. Update the database to mark the order and payment as PAID
+                try {
+                    $stmt = $this->pdo->prepare("UPDATE orders SET order_status = 'confirmed' WHERE order_id = ?");
+                    $stmt->execute([$orderId]);
+
+                    $stmt = $this->pdo->prepare("
+                        UPDATE payments 
+                        SET payment_status = 'successful', 
+                            gateway_reference = ?, 
+                            provider = 'Paystack',
+                            paid_at = NOW() 
+                        WHERE order_id = ?
+                    ");
+                    $stmt->execute([$reference, $orderId]);
+                } catch (Exception $e) {
+                    return "Payment successful, but failed to update order status in database.";
+                }
+
+                unset($_SESSION['checkout_data']); 
+                return $placeOrderResult; 
+            } else {
+                return $placeOrderResult['message'];
+            }
+        }
+        return "Payment verification failed.";
+    
+    }
+    
 }

@@ -534,6 +534,93 @@ class Order
 
         return $items;
     }
+
+
+        // Add this method INSIDE your Order class
+    public function createPaidOrder($user_id, $data, $reference, $delivery_fee = 0)
+    {
+        $user_id = (int) $user_id;
+        $delivery_fee = (float) $delivery_fee;
+        
+        $recipient_name = trim($data['recipient_name'] ?? 'Customer');
+        $contact_phone = trim($data['contact_phone'] ?? '0000000000');
+        $delivery_method = $data['delivery_method'] ?? 'delivery';
+        $delivery_address = trim($data['delivery_address'] ?? '');
+        $city = trim($data['city'] ?? '');
+        $delivery_notes = trim($data['delivery_notes'] ?? '');
+        $gift_message = trim($data['gift_message'] ?? '');
+
+        $this->conn->begin_transaction();
+
+        try {
+            // 1. Get active cart
+            $stmt = $this->conn->prepare("SELECT cart_id FROM carts WHERE user_id = ? AND status = 'active' ORDER BY cart_id DESC LIMIT 1 FOR UPDATE");
+            $stmt->bind_param("i", $user_id);
+            $stmt->execute();
+            $cart = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$cart) { $this->conn->rollback(); return "Your cart is empty."; }
+            $cart_id = (int) $cart['cart_id'];
+
+            // 2. Get cart items
+            $stmt = $this->conn->prepare("SELECT ci.product_id, ci.quantity, p.product_name, p.price, p.stock_quantity FROM cart_items ci INNER JOIN products p ON ci.product_id = p.product_id WHERE ci.cart_id = ? FOR UPDATE");
+            $stmt->bind_param("i", $cart_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $items = [];
+            while ($row = $result->fetch_assoc()) { $items[] = $row; }
+            $stmt->close();
+
+            if (empty($items)) { $this->conn->rollback(); return "Your cart is empty."; }
+
+            // 3. Calculate Subtotal
+            $subtotal = 0;
+            foreach ($items as $item) {
+                if ((int) $item['quantity'] > (int) $item['stock_quantity']) {
+                    $this->conn->rollback();
+                    return "Not enough stock for " . $item['product_name'];
+                }
+                $subtotal += (float) $item['price'] * (int) $item['quantity'];
+            }
+            $total_amount = $subtotal + $delivery_fee;
+            $order_number = 'GLY-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(4)));
+
+            // 4. Insert Order
+            $stmt = $this->conn->prepare("INSERT INTO orders (order_number, user_id, recipient_name, contact_phone, delivery_method, delivery_address, city, delivery_notes, gift_message, subtotal, delivery_fee, total_amount, order_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed')");
+            $stmt->bind_param("sisssssssddd", $order_number, $user_id, $recipient_name, $contact_phone, $delivery_method, $delivery_address, $city, $delivery_notes, $gift_message, $subtotal, $delivery_fee, $total_amount);
+            if (!$stmt->execute()) { throw new Exception("Unable to save order."); }
+            $order_id = $this->conn->insert_id;
+            $stmt->close();
+
+            // 5. Insert Order Items
+            $stmt = $this->conn->prepare("INSERT INTO order_items (order_id, product_id, product_name, unit_price, quantity) VALUES (?, ?, ?, ?, ?)");
+            foreach ($items as $item) {
+                $stmt->bind_param("iisdi", $order_id, $item['product_id'], $item['product_name'], $item['price'], $item['quantity']);
+                $stmt->execute();
+            }
+            $stmt->close();
+
+            // 6. Insert Payment Record
+            $stmt = $this->conn->prepare("INSERT INTO payments (order_id, payment_method, provider, gateway_reference, amount, currency, payment_status, paid_at) VALUES (?, 'card', 'Paystack', ?, ?, 'GHS', 'successful', NOW())");
+            $stmt->bind_param("isds", $order_id, $reference, $total_amount);
+            $stmt->execute();
+            $stmt->close();
+
+            // 7. Clear the Cart
+            $stmt = $this->conn->prepare("DELETE FROM cart_items WHERE cart_id = ?");
+            $stmt->bind_param("i", $cart_id);
+            $stmt->execute();
+            $stmt->close();
+
+            $this->conn->commit();
+            return ['success' => true, 'order_number' => $order_number];
+
+        } catch (Throwable $e) {
+            $this->conn->rollback();
+            return "Error: " . $e->getMessage();
+        }
+    }
 }
 
 ?>
